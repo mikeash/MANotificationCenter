@@ -4,7 +4,7 @@
 
 @interface MANotificationCenter : NSObject
 {
-    CFMutableDictionaryRef _objectsDict;
+    NSMutableDictionary *_map;
 }
 
 - (id)addObserverForName: (NSString *)name object: (id)object block: (void (^)(NSNotification *note))block;

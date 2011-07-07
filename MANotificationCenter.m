@@ -2,42 +2,96 @@
 #import "MANotificationCenter.h"
 
 
-@implementation MANotificationCenter
-
-- (id)init
+@interface _MANotificationCenterDictionaryKey : NSObject
 {
-    if((self = [super init]))
+    NSString *_name;
+    id _object;
+}
+
++ (_MANotificationCenterDictionaryKey *)keyForName: (NSString *)name object: (id)obj;
+
+@end
+
+@implementation _MANotificationCenterDictionaryKey
+
+- (id)_initWithName: (NSString *)name object: (id)obj
+{
+    if((self = [self init]))
     {
-        _objectsDict = CFDictionaryCreateMutable(NULL, 0, NULL, &kCFTypeDictionaryValueCallBacks);
+        _name = [name copy];
+        _object = obj;
     }
     return self;
 }
 
 - (void)dealloc
 {
-    CFRelease(_objectsDict);
+    [_name release];
+    [super dealloc];
+}
+
++ (_MANotificationCenterDictionaryKey *)keyForName: (NSString *)name object: (id)obj
+{
+    return [[[self alloc] _initWithName: name object: obj] autorelease];
+}
+
+static BOOL Equal(id a, id b)
+{
+    if(!a && !b)
+        return YES;
+    else if(!a || !b)
+        return NO;
+    else
+        return [a isEqual: b];
+}
+
+- (BOOL)isEqual: (id)other
+{
+    if(![other isKindOfClass: [_MANotificationCenterDictionaryKey class]])
+        return NO;
+    
+    _MANotificationCenterDictionaryKey *otherKey = other;
+    return Equal(_name, otherKey->_name) && Equal(_object, otherKey->_object);
+}
+
+- (NSUInteger)hash
+{
+    return [_name hash] ^ [_object hash];
+}
+
+- (id)copyWithZone: (NSZone *)zone
+{
+    return [self retain];
+}
+
+@end
+
+@implementation MANotificationCenter
+
+- (id)init
+{
+    if((self = [super init]))
+    {
+        _map = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [_map release];
     [super dealloc];
 }
 
 - (id)addObserverForName: (NSString *)name object: (id)object block: (void (^)(NSNotification *note))block
 {
-    if(!name)
-        name = (id)[NSNull null];
-    if(!object)
-        object = [NSNull null];
+    _MANotificationCenterDictionaryKey *key = [_MANotificationCenterDictionaryKey keyForName: name object: object];
     
-    NSMutableDictionary *innerDict = (id)CFDictionaryGetValue(_objectsDict, object);
-    if(!innerDict)
-    {
-        innerDict = [NSMutableDictionary dictionary];
-        CFDictionarySetValue(_objectsDict, object, innerDict);
-    }
-    
-    NSMutableSet *observerBlocks = [innerDict objectForKey: name];
+    NSMutableSet *observerBlocks = [_map objectForKey: key];
     if(!observerBlocks)
     {
         observerBlocks = [NSMutableSet set];
-        [innerDict setObject: observerBlocks forKey: name];
+        [_map setObject: observerBlocks forKey: key];
     }
     
     void (^copiedBlock)(NSNotification *note);
@@ -47,15 +101,11 @@
     
     [copiedBlock release];
     
-    __block id weakObject = object;
     void (^removalBlock)(void) = ^{
-        NSMutableDictionary *innerDict = (id)CFDictionaryGetValue(_objectsDict, weakObject);
-        NSMutableSet *observerBlocks = [innerDict objectForKey: name];
+        NSMutableSet *observerBlocks = [_map objectForKey: key];
         [observerBlocks removeObject: copiedBlock];
         if([observerBlocks count] == 0)
-            [innerDict removeObjectForKey: name];
-        if([innerDict count] == 0)
-            CFDictionaryRemoveValue(_objectsDict, weakObject);
+            [_map removeObjectForKey: key];
     };
     
     return [[removalBlock copy] autorelease];
@@ -69,8 +119,8 @@
 
 - (void)_postNotification: (NSNotification *)note name: (NSString *)name object: (id)object
 {
-    NSDictionary *innerDict = (id)CFDictionaryGetValue(_objectsDict, object);
-    NSSet *observerBlocks = [innerDict objectForKey: name];
+    _MANotificationCenterDictionaryKey *key = [_MANotificationCenterDictionaryKey keyForName: name object: object];
+    NSSet *observerBlocks = [_map objectForKey: key];
     for(void (^block)(NSNotification *) in observerBlocks)
         block(note);
 }
@@ -79,12 +129,11 @@
 {
     NSString *name = [note name];
     id object = [note object];
-    id null = [NSNull null];
     
     [self _postNotification: note name: name object: object];
-    [self _postNotification: note name: name object: null];
-    [self _postNotification: note name: null object: object];
-    [self _postNotification: note name: null object: null];
+    [self _postNotification: note name: name object: nil];
+    [self _postNotification: note name: nil object: object];
+    [self _postNotification: note name: nil object: nil];
 }
 
 @end
