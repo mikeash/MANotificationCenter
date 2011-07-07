@@ -102,7 +102,6 @@ static BOOL Equal(id a, id b)
     [copiedBlock release];
     
     void (^removalBlock)(void) = ^{
-        NSMutableSet *observerBlocks = [_map objectForKey: key];
         [observerBlocks removeObject: copiedBlock];
         if([observerBlocks count] == 0)
             [_map removeObjectForKey: key];
