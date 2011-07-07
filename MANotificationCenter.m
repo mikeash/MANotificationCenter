@@ -21,6 +21,11 @@
 
 - (id)addObserverForName: (NSString *)name object: (id)object block: (void (^)(NSNotification *note))block
 {
+    if(!name)
+        name = (id)[NSNull null];
+    if(!object)
+        object = [NSNull null];
+    
     NSMutableDictionary *innerDict = (id)CFDictionaryGetValue(_objectsDict, object);
     if(!innerDict)
     {
@@ -62,12 +67,24 @@
     removalBlock();
 }
 
-- (void)postNotification: (NSNotification *)note
+- (void)_postNotification: (NSNotification *)note name: (NSString *)name object: (id)object
 {
-    NSDictionary *innerDict = (id)CFDictionaryGetValue(_objectsDict, [note object]);
-    NSSet *observerBlocks = [innerDict objectForKey: [note name]];
+    NSDictionary *innerDict = (id)CFDictionaryGetValue(_objectsDict, object);
+    NSSet *observerBlocks = [innerDict objectForKey: name];
     for(void (^block)(NSNotification *) in observerBlocks)
         block(note);
+}
+
+- (void)postNotification: (NSNotification *)note
+{
+    NSString *name = [note name];
+    id object = [note object];
+    id null = [NSNull null];
+    
+    [self _postNotification: note name: name object: object];
+    [self _postNotification: note name: name object: null];
+    [self _postNotification: note name: null object: object];
+    [self _postNotification: note name: null object: null];
 }
 
 @end
