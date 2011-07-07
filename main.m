@@ -1,4 +1,4 @@
-// gcc -framework Foundation main.m MANotificationCenter.m
+// gcc -W -Wall -Wno-unused-parameter -framework Foundation main.m MANotificationCenter.m
 
 #import "MANotificationCenter.h"
 
@@ -64,5 +64,7 @@ int main(int argc, char **argv)
     for(id obj in removalObjs)
         [center removeObserver: obj];
     [center postNotification: [NSNotification notificationWithName: @"name" object: obj]];
+    
+    return 0;
 }
 
