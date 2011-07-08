@@ -56,7 +56,7 @@ static BOOL Equal(id a, id b)
 
 - (NSUInteger)hash
 {
-    return [_name hash] ^ [_object hash];
+    return [_name hash] ^ (uintptr_t)_object;
 }
 
 - (id)copyWithZone: (NSZone *)zone
