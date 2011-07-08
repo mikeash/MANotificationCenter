@@ -51,7 +51,7 @@ static BOOL Equal(id a, id b)
         return NO;
     
     _MANotificationCenterDictionaryKey *otherKey = other;
-    return Equal(_name, otherKey->_name) && Equal(_object, otherKey->_object);
+    return Equal(_name, otherKey->_name) && _object == otherKey->_object;
 }
 
 - (NSUInteger)hash
